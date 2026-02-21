@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
+  <meta name="description"
+    content="Ứng dụng đuổi chuột bằng âm thanh tần số cao. Sử dụng Web Audio API với 6 chế độ chống quen để xua đuổi chuột hiệu quả.">
+  <meta name="theme-color" content="#0a0a1e">
+  <title>Đuổi Chuột Siêu Âm — Mouse Repeller</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Đuổi Chuột">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+
+<body>
+
+  <!-- Ambient Background -->
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="container">
+
+    <!-- ═══ MINIMAL HERO — FULL VIEWPORT ═══ -->
+    <section class="hero-section hero-minimal" aria-label="Điều khiển chính">
+
+      <div class="hero-top">
+        <i data-lucide="rat" class="mini-logo"></i>
+        <div class="app-name">Đuổi Chuột Siêu Âm</div>
+      </div>
+
+      <div class="hero-center">
+        <div class="power-btn-wrapper">
+          <button id="power-btn" class="power-btn" aria-label="Bật hoặc tắt phát siêu âm" aria-pressed="false">
+            <i data-lucide="power" class="power-icon"></i>
+          </button>
+          <div class="power-ring" aria-hidden="true"></div>
+        </div>
+        <div id="status-text" class="status-text" role="status" aria-live="polite">BẤM ĐỂ BẬT</div>
+        <div id="freq-display" class="freq-display" style="display:none" aria-label="Tần số hiện tại">---</div>
+        <div class="visualizer-container" style="display:none" aria-hidden="true">
+          <canvas id="visualizer"></canvas>
+        </div>
+        <div class="chase-scene" style="display:none" aria-hidden="true">
+          <div class="chase-runner chase-rat">
+            <i data-lucide="rat"></i>
+          </div>
+          <div class="chase-runner chase-cat">
+            <i data-lucide="cat"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-bottom">
+        <div class="smart-auto-hint" id="smart-auto-hint">
+          <i data-lucide="zap" style="width:10px;height:10px"></i>
+          <span>Tự tối ưu · FM Chaos · 15–20 kHz</span>
+          <button class="hint-gear" id="advanced-gear-btn" aria-label="Cài đặt nâng cao">
+            <i data-lucide="settings" style="width:16px;height:16px"></i>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ═══ ADVANCED SETTINGS — COLLAPSIBLE ═══ -->
+    <details class="advanced-panel" id="advanced-panel">
+      <summary class="advanced-toggle" style="display:none"></summary>
+
+      <div class="advanced-content">
+
+        <!-- ═══ PATTERN CHIPS ═══ -->
+        <section class="patterns-section" aria-label="Chọn chế độ phát">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i data-lucide="settings-2" class="section-icon"></i>
+              Chế Độ
+            </h2>
+          </div>
+          <div id="pattern-cards" class="pattern-chips" role="radiogroup" aria-label="Chọn chế độ phát âm thanh">
+            <!-- Rendered by JS -->
+          </div>
+        </section>
+
+        <!-- ═══ CONTROLS — COMPACT GRID ═══ -->
+        <section class="controls-section" aria-label="Cài đặt">
+          <div class="controls-grid">
+            <!-- Volume -->
+            <div class="control-group"
+              data-tooltip="Bật volume hệ thống MAX để đạt hiệu quả tối đa. Loa suy hao nhanh ở tần số cao.">
+              <label class="control-label" for="volume-slider">
+                <i data-lucide="volume-2" class="ctrl-icon"></i>
+                Âm lượng
+                <span id="volume-value" class="control-value">80%</span>
+              </label>
+              <input type="range" id="volume-slider" min="0" max="100" value="80" step="1">
+            </div>
+
+            <!-- Timer -->
+            <div class="control-group">
+              <label class="control-label" for="timer-select">
+                <i data-lucide="timer" class="ctrl-icon"></i>
+                Hẹn giờ <span id="timer-display" class="timer-display"></span>
+              </label>
+              <select id="timer-select" class="timer-select">
+                <option value="0">Liên tục</option>
+                <option value="15">15 phút</option>
+                <option value="30">30 phút</option>
+                <option value="60">1 giờ</option>
+                <option value="120">2 giờ</option>
+                <option value="480">8 giờ</option>
+              </select>
+            </div>
+
+            <!-- Freq Min -->
+            <div class="control-group"
+              data-tooltip="Chuột nhạy nhất ở 15–20 kHz. Hạ dưới 15 kHz có thể gây khó chịu cho người trẻ.">
+              <label class="control-label" for="freq-min">
+                <i data-lucide="signal-low" class="ctrl-icon"></i>
+                Tần số min
+                <span id="freq-min-value" class="control-value">15.0 kHz</span>
+              </label>
+              <input type="range" id="freq-min" min="8000" max="22000" value="15000" step="100">
+            </div>
+
+            <!-- Freq Max -->
+            <div class="control-group"
+              data-tooltip="20 kHz là giới hạn loa thường. Trên 20 kHz cần loa siêu âm chuyên dụng.">
+              <label class="control-label" for="freq-max">
+                <i data-lucide="signal-high" class="ctrl-icon"></i>
+                Tần số max
+                <span id="freq-max-value" class="control-value">20.0 kHz</span>
+              </label>
+              <input type="range" id="freq-max" min="8000" max="22000" value="20000" step="100">
+            </div>
+          </div>
+
+          <!-- Waveform + Pet warning — single row -->
+          <div class="controls-footer">
+            <fieldset class="waveform-group" aria-label="Chọn dạng sóng"
+              data-tooltip="Đổi dạng sóng thay đổi âm sắc. Square/Saw có nhiều hài bậc cao hơn, hiệu quả chống quen tốt hơn.">
+              <button class="waveform-btn active" data-wave="sine" aria-pressed="true">Sine</button>
+              <button class="waveform-btn" data-wave="square" aria-pressed="false">Square</button>
+              <button class="waveform-btn" data-wave="sawtooth" aria-pressed="false">Saw</button>
+              <button class="waveform-btn" data-wave="triangle" aria-pressed="false">Tri</button>
+            </fieldset>
+            <div class="pet-warning-toggle"
+              data-tooltip="Bật để xem cảnh báo an toàn cho chó (nghe đến 45 kHz) và mèo (đến 64 kHz).">
+              <label class="toggle-switch" for="pet-toggle" aria-label="Toggle pet warning">
+                <input type="checkbox" id="pet-toggle" aria-label="Cảnh báo thú cưng">
+                <span class="toggle-slider"></span>
+              </label>
+              <label for="pet-toggle">
+                <i data-lucide="paw-print" class="ctrl-icon"></i>
+                Thú cưng
+              </label>
+            </div>
+          </div>
+
+          <!-- Pet Warning — collapsible -->
+          <div id="pet-warning" class="pet-warning-box" role="alert">
+            <i data-lucide="triangle-alert" class="warn-icon"></i>
+            <p>Chó (45 kHz) và mèo (64 kHz) sẽ bị ảnh hưởng. Chỉ bật khi thú cưng ở phòng khác, hoặc giảm tần số xuống
+              dưới
+              15 kHz.</p>
+          </div>
+        </section>
+
+        <!-- ═══ AUTOMATION ═══ -->
+        <section class="automation-section" aria-label="Tự động hóa">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i data-lucide="bot" class="section-icon"></i>
+              Tự Động
+            </h2>
+          </div>
+
+          <!-- Auto-rotate -->
+          <div class="auto-card"
+            data-tooltip="Tự đổi chế độ giúp chống quen (habituation). Chuột quen tần số cố định sau 3–7 ngày.">
+            <div class="auto-card-header">
+              <div class="auto-card-label">
+                <i data-lucide="repeat" class="ctrl-icon"></i>
+                <div>
+                  <strong>Tự đổi chế độ</strong>
+                  <span class="auto-hint">Xoay vòng qua tất cả chế độ</span>
+                </div>
+              </div>
+              <label class="toggle-switch" for="auto-rotate-toggle" aria-label="Toggle auto-rotate">
+                <input type="checkbox" id="auto-rotate-toggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div id="auto-rotate-options" class="auto-options hidden">
+              <label class="auto-option-label">Đổi mỗi</label>
+              <div class="auto-chips" role="radiogroup" aria-label="Khoảng thời gian đổi chế độ">
+                <button class="auto-chip active" data-rotate="1">1h</button>
+                <button class="auto-chip" data-rotate="2">2h</button>
+                <button class="auto-chip" data-rotate="4">4h</button>
+              </div>
+              <span id="rotate-status" class="auto-status"></span>
+            </div>
+          </div>
+
+          <!-- Day/Night schedule -->
+          <div class="auto-card"
+            data-tooltip="Chuột hoạt động mạnh nhất 19:00–04:00. Lịch đêm tự bật chế độ mạnh vào giờ cao điểm.">
+            <div class="auto-card-header">
+              <div class="auto-card-label">
+                <i data-lucide="sun-moon" class="ctrl-icon"></i>
+                <div>
+                  <strong>Lịch ngày / đêm</strong>
+                  <span class="auto-hint">Tự chuyển chế độ theo thời gian</span>
+                </div>
+              </div>
+              <label class="toggle-switch" for="schedule-toggle" aria-label="Toggle day/night schedule">
+                <input type="checkbox" id="schedule-toggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div id="schedule-options" class="auto-options hidden">
+              <div class="schedule-row">
+                <div class="schedule-period">
+                  <i data-lucide="sun" class="schedule-icon day"></i>
+                  <span>Ngày</span>
+                  <select id="schedule-day-pattern" class="schedule-select"></select>
+                </div>
+                <div class="schedule-period">
+                  <i data-lucide="moon" class="schedule-icon night"></i>
+                  <span>Đêm</span>
+                  <select id="schedule-night-pattern" class="schedule-select"></select>
+                </div>
+              </div>
+              <div class="schedule-row">
+                <div class="schedule-time-group">
+                  <label for="schedule-night-start">Đêm bắt đầu</label>
+                  <input type="time" id="schedule-night-start" value="22:00" class="schedule-time">
+                </div>
+                <div class="schedule-time-group">
+                  <label for="schedule-day-start">Ngày bắt đầu</label>
+                  <input type="time" id="schedule-day-start" value="06:00" class="schedule-time">
+                </div>
+              </div>
+              <span id="schedule-status" class="auto-status"></span>
+            </div>
+          </div>
+
+          <!-- Smart Schedule — based on rat activity research -->
+          <div class="auto-card smart-card"
+            data-tooltip="Dựa trên nghiên cứu: chuột thành phố hoạt động mạnh nhất 19:00–05:30. Tự bật/tắt và tối ưu hóa thiết lập.">
+            <div class="auto-card-header">
+              <div class="auto-card-label">
+                <i data-lucide="brain-circuit" class="ctrl-icon"></i>
+                <div>
+                  <strong>Giờ cao điểm chuột</strong>
+                  <span class="auto-hint">Tự bật + tối ưu hóa theo nghiên cứu</span>
+                </div>
+              </div>
+              <label class="toggle-switch" for="smart-schedule-toggle" aria-label="Toggle smart schedule">
+                <input type="checkbox" id="smart-schedule-toggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div id="smart-schedule-options" class="auto-options hidden">
+              <!-- Activity Chart -->
+              <div class="activity-chart-wrapper">
+                <label class="auto-option-label">Hoạt động chuột theo giờ</label>
+                <div class="activity-chart">
+                  <div class="activity-bar" style="--bar-height: 15%; --bar-color: var(--accent-success);"
+                    data-label="06–17h" data-level="Thấp"></div>
+                  <div class="activity-bar" style="--bar-height: 45%; --bar-color: var(--accent-warning);"
+                    data-label="17–19h" data-level="Tăng"></div>
+                  <div class="activity-bar peak" style="--bar-height: 95%; --bar-color: var(--accent-danger);"
+                    data-label="19–23h" data-level="Đỉnh 1"></div>
+                  <div class="activity-bar" style="--bar-height: 75%; --bar-color: #ff6b35;" data-label="23–03h"
+                    data-level="Cao"></div>
+                  <div class="activity-bar peak" style="--bar-height: 90%; --bar-color: var(--accent-danger);"
+                    data-label="03–05h" data-level="Đỉnh 2"></div>
+                  <div class="activity-bar" style="--bar-height: 35%; --bar-color: var(--accent-warning);"
+                    data-label="05–06h" data-level="Giảm"></div>
+                </div>
+              </div>
+
+              <!-- Time Controls -->
+              <div class="schedule-row">
+                <div class="schedule-time-group">
+                  <label for="smart-start-time">
+                    <i data-lucide="play-circle" style="width:14px;height:14px;color:var(--accent-success)"></i>
+                    Bật lúc
+                  </label>
+                  <input type="time" id="smart-start-time" value="19:00" class="schedule-time">
+                </div>
+                <div class="schedule-time-group">
+                  <label for="smart-end-time">
+                    <i data-lucide="stop-circle" style="width:14px;height:14px;color:var(--accent-danger)"></i>
+                    Tắt lúc
+                  </label>
+                  <input type="time" id="smart-end-time" value="05:30" class="schedule-time">
+                </div>
+              </div>
+
+              <!-- Auto-optimize info -->
+              <div class="smart-optimize-info">
+                <i data-lucide="sparkles" style="width:14px;height:14px;color:var(--accent-warning)"></i>
+                <span>Khi bật sẽ tự tối ưu: <strong>Vol MAX</strong> · <strong>15–20 kHz</strong> ·
+                  <strong>Square</strong>
+                  · <strong>FM Chaos</strong></span>
+              </div>
+
+              <span id="smart-schedule-status" class="auto-status"></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══ EFFECTIVENESS TIPS ═══ -->
+        <section class="effectiveness-section" aria-label="Mẹo tăng hiệu quả">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i data-lucide="target" class="section-icon"></i>
+              Tăng Hiệu Quả
+            </h2>
+          </div>
+
+          <div class="tips-grid">
+            <!-- Tip 1: Placement -->
+            <div class="tip-card">
+              <div class="tip-icon" style="--tip-color: var(--accent-primary);">
+                <i data-lucide="map-pin"></i>
+              </div>
+              <div class="tip-content">
+                <strong>Vị trí đặt</strong>
+                <p>Hướng loa thẳng vào khu vực chuột: bếp, kho, gầm giường. Mỗi phòng cần 1 thiết bị riêng.</p>
+                <div class="tip-meter">
+                  <span class="tip-meter-label">Phạm vi hiệu quả</span>
+                  <div class="meter-bar">
+                    <div class="meter-fill"
+                      style="width: 65%; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));">
+                    </div>
+                  </div>
+                  <span class="tip-meter-value">3 – 5m</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tip 2: Volume -->
+            <div class="tip-card">
+              <div class="tip-icon" style="--tip-color: var(--accent-danger);">
+                <i data-lucide="volume-2"></i>
+              </div>
+              <div class="tip-content">
+                <strong>Bật Volume MAX</strong>
+                <p>Loa suy hao nhanh ở tần số cao. Ở 18-20 kHz chỉ còn 10-30% công suất. Bật max hệ thống, chỉnh trong
+                  app.
+                </p>
+                <div class="tip-meter">
+                  <span class="tip-meter-label">Công suất ở 20 kHz</span>
+                  <div class="meter-bar">
+                    <div class="meter-fill"
+                      style="width: 25%; background: linear-gradient(90deg, var(--accent-danger), var(--accent-warning));">
+                    </div>
+                  </div>
+                  <span class="tip-meter-value">~10-30%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tip 3: Anti-habituation -->
+            <div class="tip-card">
+              <div class="tip-icon" style="--tip-color: var(--accent-secondary);">
+                <i data-lucide="refresh-cw"></i>
+              </div>
+              <div class="tip-content">
+                <strong>Chống quen (Habituation)</strong>
+                <p>Đổi chế độ mỗi 1-2 ngày hoặc bật Auto-Rotate. Chuột quen tần số cố định chỉ sau 3-7 ngày.</p>
+                <div class="tip-badges">
+                  <span class="stat-badge green">Auto-Rotate</span>
+                  <span class="stat-badge purple">Lịch ngày/đêm</span>
+                  <span class="stat-badge cyan">FM Chaos</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tip 4: Complementary -->
+            <div class="tip-card">
+              <div class="tip-icon" style="--tip-color: var(--accent-success);">
+                <i data-lucide="shield-plus"></i>
+              </div>
+              <div class="tip-content">
+                <strong>Kết hợp biện pháp</strong>
+                <p>Siêu âm là biện pháp bổ trợ. Kết hợp thêm để đạt hiệu quả tối đa.</p>
+                <div class="tip-checklist">
+                  <div class="tip-check"><i data-lucide="check-circle-2"></i> Vệ sinh sạch sẽ</div>
+                  <div class="tip-check"><i data-lucide="check-circle-2"></i> Bít khe hở, lỗ thông</div>
+                  <div class="tip-check"><i data-lucide="check-circle-2"></i> Bẫy chuột vật lý</div>
+                  <div class="tip-check"><i data-lucide="check-circle-2"></i> Tinh dầu bạc hà</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Effectiveness summary bar -->
+          <div class="effectiveness-summary">
+            <div class="eff-item">
+              <span class="eff-label">Tuần đầu</span>
+              <div class="eff-bar-wrap">
+                <div class="meter-bar">
+                  <div class="meter-fill"
+                    style="width: 70%; background: linear-gradient(90deg, var(--accent-success), #00d4ff);"></div>
+                </div>
+              </div>
+              <span class="eff-value success">30-50%</span>
+            </div>
+            <div class="eff-item">
+              <span class="eff-label">Dài hạn (sweep)</span>
+              <div class="eff-bar-wrap">
+                <div class="meter-bar">
+                  <div class="meter-fill"
+                    style="width: 45%; background: linear-gradient(90deg, var(--accent-warning), var(--accent-danger));">
+                  </div>
+                </div>
+              </div>
+              <span class="eff-value warning">Trung bình</span>
+            </div>
+            <div class="eff-item">
+              <span class="eff-label">Kết hợp biện pháp</span>
+              <div class="eff-bar-wrap">
+                <div class="meter-bar">
+                  <div class="meter-fill"
+                    style="width: 85%; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));">
+                  </div>
+                </div>
+              </div>
+              <span class="eff-value highlight">Cao</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Research button — inside advanced -->
+        <div class="research-trigger">
+          <button id="open-research" class="research-btn" aria-haspopup="dialog">
+            <i data-lucide="book-open-text"></i>
+            Xem Dữ Liệu Nghiên Cứu
+          </button>
+        </div>
+
+      </div><!-- /.advanced-content -->
+    </details><!-- /.advanced-panel -->
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="app-footer">
+      <p>v1.0 &mdash; Biện pháp bổ trợ, không thay thế diệt chuột chuyên nghiệp.</p>
+    </footer>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       RESEARCH MODAL — Full-screen slide-up panel
+       ═══════════════════════════════════════════════════════════ -->
+  <div id="research-modal" class="research-modal" role="dialog" aria-modal="true" aria-label="Dữ liệu nghiên cứu">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h2>
+          <i data-lucide="book-open-text"></i>
+          Dữ Liệu Nghiên Cứu
+        </h2>
+        <button id="close-research" class="modal-close" aria-label="Đóng">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="tabs" role="tablist">
+          <button class="tab-btn active" data-tab="tab-hearing" role="tab" aria-selected="true">
+            <i data-lucide="ear"></i> Thính giác
+          </button>
+          <button class="tab-btn" data-tab="tab-speakers" role="tab" aria-selected="false">
+            <i data-lucide="speaker"></i> Loa
+          </button>
+          <button class="tab-btn" data-tab="tab-science" role="tab" aria-selected="false">
+            <i data-lucide="flask-conical"></i> Khoa học
+          </button>
+          <button class="tab-btn" data-tab="tab-strategy" role="tab" aria-selected="false">
+            <i data-lucide="lightbulb"></i> Chiến lược
+          </button>
+          <button class="tab-btn" data-tab="tab-howto" role="tab" aria-selected="false">
+            <i data-lucide="circle-help"></i> FAQ
+          </button>
+        </div>
+
+        <!-- TAB 1: Thính giác -->
+        <div id="tab-hearing" class="tab-panel active" role="tabpanel">
+          <table class="research-table">
+            <thead>
+              <tr>
+                <th>Loài</th>
+                <th>Dải nghe</th>
+                <th>Nhạy nhất</th>
+                <th>Stress</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Chuột nhắt</strong></td>
+                <td><span class="highlight">1 – 91 kHz</span></td>
+                <td><span class="success">15 – 20 kHz</span></td>
+                <td><span class="danger">~40 kHz</span></td>
+              </tr>
+              <tr>
+                <td><strong>Chuột cống</strong></td>
+                <td><span class="highlight">200 Hz – 90 kHz</span></td>
+                <td><span class="success">8 – 38 kHz</span></td>
+                <td><span class="danger">~20 kHz</span></td>
+              </tr>
+              <tr>
+                <td>Con người</td>
+                <td>20 Hz – 20 kHz</td>
+                <td>1 – 5 kHz</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>Chó</td>
+                <td><span class="warning">67 Hz – 45 kHz</span></td>
+                <td>8 kHz</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>Mèo</td>
+                <td><span class="warning">48 Hz – 64 kHz</span></td>
+                <td>8 kHz</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="info-card">
+            <h4>So sánh dải tần</h4>
+            <div class="effectiveness-meter">
+              <div class="meter-label"><span>Con người</span><span class="stat-badge cyan">20 kHz</span></div>
+              <div class="meter-bar">
+                <div class="meter-fill" style="width: 22%; background: var(--gradient-accent);"></div>
+              </div>
+            </div>
+            <div class="effectiveness-meter">
+              <div class="meter-label"><span>Chuột nhắt</span><span class="stat-badge purple">91 kHz</span></div>
+              <div class="meter-bar">
+                <div class="meter-fill" style="width: 100%; background: linear-gradient(90deg, #a855f7, #ff2d78);">
+                </div>
+              </div>
+            </div>
+            <div class="effectiveness-meter">
+              <div class="meter-label"><span>Chuột cống</span><span class="stat-badge red">90 kHz</span></div>
+              <div class="meter-bar">
+                <div class="meter-fill" style="width: 99%; background: linear-gradient(90deg, #ff2d78, #ff6b35);"></div>
+              </div>
+            </div>
+            <div class="effectiveness-meter">
+              <div class="meter-label"><span>Loa thường</span><span class="stat-badge green">20 kHz</span></div>
+              <div class="meter-bar">
+                <div class="meter-fill" style="width: 22%; background: linear-gradient(90deg, #10b981, #00d4ff);"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <h4>Sweet Spot</h4>
+            <p>Vùng <span class="stat-badge cyan">15 – 20 kHz</span> trùng khớp giữa thính giác nhạy nhất của chuột và
+              giới hạn tối đa loa thường. Tiếng kêu stress chuột cống ở <span class="stat-badge red">20 kHz</span> có
+              thể kích hoạt bản năng sợ.</p>
+          </div>
+
+          <div class="info-card sources-card">
+            <h4><i data-lucide="book-marked" style="width:16px;height:16px;display:inline"></i> Nguồn tham khảo</h4>
+            <ol class="sources-list">
+              <li>Ehret, G. (1974). "Age-dependent hearing loss in normal hearing mice." <em>Naturwissenschaften</em>,
+                61(11), 506.</li>
+              <li>Heffner, H.E. & Heffner, R.S. (2001). "Hearing ranges of laboratory animals." <em>J. Am. Assoc. Lab.
+                  Anim. Sci.</em>, 46(1), 20–22.</li>
+              <li>Kelly, J.B. & Masterton, B. (1977). "Auditory sensitivity of the albino rat." <em>J. Comp. Physiol.
+                  Psychol.</em>, 91(4), 930.</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- TAB 2: Loa -->
+        <div id="tab-speakers" class="tab-panel" role="tabpanel">
+          <table class="research-table">
+            <thead>
+              <tr>
+                <th>Thiết bị</th>
+                <th>Dải tần</th>
+                <th>Max thực tế</th>
+                <th>Đánh giá</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Loa laptop</strong></td>
+                <td>100 Hz – 18 kHz</td>
+                <td><span class="warning">~18 kHz</span></td>
+                <td>Hạn chế</td>
+              </tr>
+              <tr>
+                <td><strong>Loa desktop</strong></td>
+                <td>50 Hz – 20 kHz</td>
+                <td><span class="success">~20 kHz</span></td>
+                <td>Tốt</td>
+              </tr>
+              <tr>
+                <td><strong>Điện thoại</strong></td>
+                <td>200 Hz – 20 kHz</td>
+                <td><span class="warning">~20 kHz</span></td>
+                <td>Rất yếu</td>
+              </tr>
+              <tr>
+                <td><strong>Bluetooth</strong></td>
+                <td>60 Hz – 20 kHz</td>
+                <td><span class="success">~20 kHz</span></td>
+                <td>Khá tốt</td>
+              </tr>
+              <tr>
+                <td><strong>Siêu âm</strong></td>
+                <td>15 – 65 kHz</td>
+                <td><span class="highlight">~65 kHz</span></td>
+                <td>Tốt nhất</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="info-card">
+            <h4>Lưu ý kỹ thuật</h4>
+            <ul>
+              <li><strong>Sample Rate:</strong> 48,000 Hz → max <span class="stat-badge cyan">24 kHz</span> (Nyquist
+                theorem)</li>
+              <li><strong>Suy hao:</strong> Ở 18-20 kHz, công suất chỉ còn <span class="stat-badge red">10-30%</span>
+              </li>
+              <li><strong>Tính hướng:</strong> Siêu âm không xuyên tường, hiệu quả <span
+                  class="stat-badge green">3-5m</span></li>
+              <li><strong>Mẹo:</strong> Bật volume hệ thống MAX, chỉnh trong app</li>
+            </ul>
+          </div>
+
+          <div class="info-card sources-card">
+            <h4><i data-lucide="book-marked" style="width:16px;height:16px;display:inline"></i> Nguồn</h4>
+            <ol class="sources-list">
+              <li>Nyquist, H. (1928). "Certain topics in telegraph transmission theory." <em>Trans. AIEE</em>, 47(2),
+                617–644.</li>
+              <li>Specs loa phổ biến từ JBL, Harman Kardon, Anker — datasheet công khai.</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- TAB 3: Khoa học -->
+        <div id="tab-science" class="tab-panel" role="tabpanel">
+          <div class="info-card warning-card">
+            <p>Hiệu quả thực tế <strong>không đảm bảo 100%</strong>. App là biện pháp bổ trợ, không thay thế diệt chuột
+              chuyên nghiệp.</p>
+          </div>
+          <div class="accordion-item open">
+            <button class="accordion-header" aria-expanded="true"><span>Nghiên cứu ủng hộ</span><i
+                data-lucide="chevron-down" class="arrow"></i></button>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <ul>
+                  <li><strong>Arizona State Univ:</strong> Siêu âm ngăn chuột xâm nhập khi đặt đúng vị trí</li>
+                  <li><strong>Hiệu quả ngắn hạn:</strong> Giảm <span class="stat-badge green">30-50%</span> hoạt động
+                    trong tuần đầu</li>
+                  <li><strong>Frequency sweeping:</strong> Thay đổi tần số liên tục giảm khả năng quen</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <button class="accordion-header" aria-expanded="false"><span>Hạn chế</span><i data-lucide="chevron-down"
+                class="arrow"></i></button>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <ul>
+                  <li><strong>FTC (Mỹ):</strong> Nhiều thiết bị thiếu bằng chứng khoa học</li>
+                  <li><strong>Cornell & Kansas State:</strong> Thiết bị thương mại "gần như vô dụng"</li>
+                  <li><strong>Habituation:</strong> Chuột quen tần số cố định trong <span class="stat-badge red">3-7
+                      ngày</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <button class="accordion-header" aria-expanded="false"><span>Tổng hợp hiệu quả</span><i
+                data-lucide="chevron-down" class="arrow"></i></button>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <table class="research-table">
+                  <thead>
+                    <tr>
+                      <th>Yếu tố</th>
+                      <th>Đánh giá</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Ngắn hạn (1-7 ngày)</td>
+                      <td><span class="success">30-50%</span></td>
+                    </tr>
+                    <tr>
+                      <td>Dài hạn (tần số cố định)</td>
+                      <td><span class="danger">Thấp</span></td>
+                    </tr>
+                    <tr>
+                      <td>Dài hạn (frequency sweep)</td>
+                      <td><span class="warning">Trung bình</span></td>
+                    </tr>
+                    <tr>
+                      <td>Xuyên tường</td>
+                      <td><span class="danger">Không</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="info-card">
+            <h4>Kết hợp biện pháp khác</h4>
+            <p>Vệ sinh sạch sẽ &bull; Bít khe hở &bull; Bẫy chuột &bull; Tinh dầu bạc hà</p>
+          </div>
+
+          <div class="info-card sources-card">
+            <h4><i data-lucide="book-marked" style="width:16px;height:16px;display:inline"></i> Nguồn tham khảo</h4>
+            <ol class="sources-list">
+              <li>Schumake, S.A. (1982). "Ultrasonic and ultrasound devices for pest control." <em>Proc. Vertebrate Pest
+                  Conference</em>, 10.</li>
+              <li>Federal Trade Commission. (2001). "FTC warns sellers of ultrasonic pest control devices." <em>FTC
+                  Press Release</em>.</li>
+              <li>Timm, R.M. (1994). "Prevention and control of wildlife damage." <em>Univ. of Nebraska–Lincoln</em>
+                (Cornell & Kansas State review).</li>
+              <li>Internet Center for Wildlife Damage Management, UNL. "Rats — Habituation data."</li>
+              <li>Lam, Y.W. & Sherman, S.M. (2013). "Activation of ultrasonic vocalizations in rats." <em>J.
+                  Neurosci.</em></li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- TAB 4: Chiến lược -->
+        <div id="tab-strategy" class="tab-panel" role="tabpanel">
+          <table class="research-table compact">
+            <thead>
+              <tr>
+                <th>Chế độ</th>
+                <th>Chống quen</th>
+                <th>Dùng khi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Quét Tuyến Tính</td>
+                <td><span class="success">Tốt</span></td>
+                <td>Chạy nền cả ngày</td>
+              </tr>
+              <tr>
+                <td>Nhảy Ngẫu Nhiên</td>
+                <td><span class="highlight">Rất tốt</span></td>
+                <td>Khu vực nhỏ</td>
+              </tr>
+              <tr>
+                <td>Xung Liên Tục</td>
+                <td><span class="highlight">Rất tốt</span></td>
+                <td>Ban đêm</td>
+              </tr>
+              <tr>
+                <td>Hỗn Loạn FM</td>
+                <td><span class="highlight">Xuất sắc</span></td>
+                <td>Anti-hab tối đa</td>
+              </tr>
+              <tr>
+                <td>Chồng Sóng Hài</td>
+                <td><span class="success">Tốt</span></td>
+                <td>Bao phủ rộng</td>
+              </tr>
+              <tr>
+                <td>Giả Thiên Địch</td>
+                <td><span class="warning">TB</span></td>
+                <td>Phát hiện chuột</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="info-card">
+            <h4>Lịch đề xuất</h4>
+            <ul>
+              <li><strong>Ngày:</strong> Quét Tuyến Tính / Chồng Sóng Hài</li>
+              <li><strong>Tối:</strong> Nhảy Ngẫu Nhiên (4h)</li>
+              <li><strong>Đêm:</strong> Hỗn Loạn FM (22:00–06:00)</li>
+              <li><strong>Phát hiện chuột:</strong> Giả Thiên Địch + MAX vol (30p)</li>
+              <li><strong>Đổi chế độ mỗi 1-2 ngày</strong></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- TAB 5: FAQ -->
+        <div id="tab-howto" class="tab-panel" role="tabpanel">
+          <div class="accordion-item">
+            <button class="accordion-header" aria-expanded="false"><span>Không nghe thấy gì, app có hoạt động?</span><i
+                data-lucide="chevron-down" class="arrow"></i></button>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <p>Đúng! 17-20 kHz nằm ngoài ngưỡng nghe người lớn. Hạ xuống 15 kHz để test, hoặc dùng Spectroid
+                  (Android) để xác nhận.</p>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <button class="accordion-header" aria-expanded="false"><span>Có hại cho sức khỏe?</span><i
+                data-lucide="chevron-down" class="arrow"></i></button>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <p>Siêu âm >20 kHz không hại người trưởng thành. 15-18 kHz có thể gây khó chịu cho người trẻ và thú
+                  cưng. Tăng freq min lên 18 kHz nếu khó chịu.</p>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <button class="accordion-header" aria-expanded="false"><span>Đặt thiết bị ở đâu?</span><i
+                data-lucide="chevron-down" class="arrow"></i></button>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <p>Gần khu vực chuột: bếp, kho, gậm giường. Loa hướng thẳng. Không xuyên tường → mỗi phòng 1 thiết bị.
+                  Hiệu quả 3-5m.</p>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <button class="accordion-header" aria-expanded="false"><span>Tại sao bật volume MAX?</span><i
+                data-lucide="chevron-down" class="arrow"></i></button>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <p>Loa suy hao nhanh ở tần số cao. Ở 18-20 kHz chỉ còn 10-30% công suất. Bật max hệ thống, chỉnh trong
+                  app.</p>
+              </div>
+            </div>
+          </div>
+          <div class="info-card">
+            <h4>Công nghệ</h4>
+            <p>Web Audio API (OscillatorNode + AnalyserNode) &bull; 48kHz sample rate &bull; 6 anti-habituation patterns
+              &bull; Wake Lock API &bull; PWA offline</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+
+</html>

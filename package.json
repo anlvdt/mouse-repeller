@@ -1,0 +1,12 @@
+{
+    "name": "mouse-repeller",
+    "version": "1.0.0",
+    "description": "Ultrasonic Mouse Repeller PWA",
+    "type": "module",
+    "scripts": {
+        "dev": "npx -y vite --port 5173 --open"
+    },
+    "devDependencies": {
+        "vite": "^7.3.1"
+    }
+}

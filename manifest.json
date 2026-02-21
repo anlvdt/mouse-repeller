@@ -1,0 +1,61 @@
+{
+  "id": "mouse-repeller-pwa",
+  "name": "Đuổi Chuột Siêu Âm — Mouse Repeller",
+  "short_name": "Đuổi Chuột",
+  "description": "Ứng dụng đuổi chuột bằng âm thanh tần số cao với 6 chế độ chống quen. PWA offline-ready.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#0a0a1e",
+  "theme_color": "#0a0a1e",
+  "orientation": "any",
+  "categories": [
+    "utilities",
+    "lifestyle"
+  ],
+  "lang": "vi",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "Giao diện chính trên điện thoại"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Bật Đuổi Chuột",
+      "short_name": "Bật",
+      "description": "Bật phát siêu âm ngay",
+      "url": "/?action=start",
+      "icons": [
+        {
+          "src": "assets/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
