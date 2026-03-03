@@ -132,3 +132,42 @@ Nếu bạn thấy dự án này hữu ích, hãy cân nhắc ủng hộ tác gi
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.
+---
+
+## Tác giả
+
+**Le Van An** (Vietnam IT)
+
+[![GitHub](https://img.shields.io/badge/GitHub-anlvdt-181717?style=for-the-badge&logo=github)](https://github.com/anlvdt)
+
+## Ủng hộ dự án
+
+Nếu bạn thấy dự án hữu ích, hãy cân nhắc ủng hộ tác giả.
+
+### Chuyển khoản
+
+| Phương thức | Số tài khoản | Chủ tài khoản |
+|------------|-------------|---------------|
+| MB Bank | `0360126996868` | LE VAN AN |
+| Momo | `0976896621` | LE VAN AN |
+
+### Shopee Affiliate
+
+Mình làm Affiliate Shopee, nếu thấy sản phẩm hữu ích hãy ủng hộ mình một click nhé. Chỉ cần click không cần mua cũng được!
+
+[![Shopee](https://img.shields.io/badge/Shopee-EE4D2D?style=for-the-badge&logo=shopee&logoColor=white)](https://s.shopee.vn/7AYWh5NzOB)
+
+**[Xem sản phẩm trên Shopee](https://s.shopee.vn/7AYWh5NzOB)** — Xin cảm ơn!
+
+### Ủng hộ khác
+
+- Star repo trên GitHub
+- Chia sẻ dự án cho bạn bè, đồng nghiệp
+- Báo bug hoặc đề xuất tính năng mới qua Issues
+- Đóng góp code qua Pull Requests
+
+---
+
+## License
+
+MIT License — Copyright (c) 2026 Le An (Vietnam IT)
